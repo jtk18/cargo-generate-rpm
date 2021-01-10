@@ -15,6 +15,10 @@ pub enum ConfigError {
     AssetFileWrongType(usize, &'static str, &'static str),
     #[error("Asset file not found: {0}")]
     AssetFileNotFound(String),
+    #[error("Invalid glob at {0}: {1}")]
+    AssetGlobInvalid(usize, &'static str),
+    #[error("File unreadable: {0}")]
+    AssetReadFailed(&'static str),
 }
 
 #[derive(thiserror::Error, Debug)]

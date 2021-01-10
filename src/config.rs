@@ -1,6 +1,7 @@
 use crate::error::{ConfigError, Error};
 use cargo_toml::Error as CargoTomlError;
 use cargo_toml::Manifest;
+use glob::glob;
 use rpm::{Compressor, RPMBuilder, RPMFileOptions};
 use std::env::consts::ARCH;
 use std::path::{Path, PathBuf};
@@ -71,9 +72,9 @@ impl Config {
                 .as_table()
                 .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
                 .clone();
-            let info = _handle_file(table, idx)?;
+            let mut info = _get_files_from_assent_entry(table, idx)?;
 
-            files.push(info);
+            files.append(&mut info);
         }
         Ok(files)
     }
@@ -178,26 +179,59 @@ impl Config {
     }
 }
 
-fn _handle_file(table: ConfigTable, idx: usize) -> Result<FileInfo, ConfigError> {
+fn _get_files_from_assent_entry(table: ConfigTable, idx: usize) -> Result<Vec<FileInfo>, ConfigError> {
     let source = _get_string_from_table(&table, "source", idx)?;
     let dest = _get_string_from_table(&table, "dest", idx)?;
-
     let user = _get_opt_string_from_table(&table, "user", idx)?;
     let group = _get_opt_string_from_table(&table, "group", idx)?;
     let mode = _get_mode(&table, &source, idx)?;
     let config = _get_bool_from_table(&table, "config", idx)?;
     let doc = _get_bool_from_table(&table, "doc", idx)?;
 
-    let info = FileInfo {
-        source,
-        dest,
-        user,
-        group,
-        mode,
-        config,
-        doc,
-    };
-    Ok(info)
+    if source.contains('*') {
+        let mut files = Vec::new();
+        let base = _get_base_from_glob(&source);
+        for path in glob(&source)
+            .map_err(|e| ConfigError::AssetGlobInvalid(idx, e.msg))? {
+                let file = path.map_err(|_| ConfigError::AssetReadFailed("asset"))?;
+                let rel_path = file.strip_prefix(base).unwrap();
+                let dest_path = Path::new(&dest).join(rel_path);
+                files.push(
+                    FileInfo{
+                        source: file.to_str().unwrap().to_owned(),
+                        dest: dest_path.to_str().unwrap().to_owned(),
+                        user: user.clone(),
+                        group: group.clone(),
+                        mode,
+                        config,
+                        doc
+                    }
+                );
+            }
+        Ok(files)
+    }
+    else {
+        let info = FileInfo {
+            source,
+            dest,
+            user,
+            group,
+            mode,
+            config,
+            doc,
+        };
+        Ok(vec![info])
+    }
+}
+
+fn _get_base_from_glob(glob: &str) -> &str {
+    let base = glob.split('*').next().unwrap();
+    let base_path = Path::new(base);
+    if base_path.is_dir() {
+        base
+    } else {
+        base_path.parent().unwrap().to_str().unwrap()
+    }
 }
 
 fn _get_string_from_table(
