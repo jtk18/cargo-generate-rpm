@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use toml::value::Table;
 
+pub type ConfigTable = toml::map::Map<std::string::String, cargo_toml::Value>;
+
 #[derive(Debug)]
 pub struct Config {
     manifest: Manifest,
@@ -176,40 +178,73 @@ impl Config {
 }
 
 fn _handle_file(
-    table: toml::map::Map<std::string::String, cargo_toml::Value>,
+    table: ConfigTable,
     idx: usize,
 ) -> Result<FileInfo, ConfigError> {
-    let source = table
+    let source = _get_source(&table, idx)?;
+    let dest = _get_dest(&table, idx)?;
+
+    let user = _get_user(&table, idx)?;
+    let group = _get_group(&table, idx)?;
+    let mode = _get_mode(&table, &source, idx)?;
+    let config = _get_config(&table, idx)?;
+    let doc = _get_doc(&table, idx)?;
+
+    let info = FileInfo {
+        source,
+        dest,
+        user,
+        group,
+        mode,
+        config,
+        doc,
+    };
+    Ok(info)
+}
+
+fn _get_source(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
+    Ok(table
         .get("source")
         .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
         .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?;
-    let dest = table
+        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?.to_owned())
+}
+
+fn _get_dest(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
+    Ok(table
         .get("dest")
         .ok_or(ConfigError::AssetFileUndefined(idx, "dest"))?
         .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?;
+        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?.to_owned())
+}
 
-    let user = if let Some(user) = table.get("user") {
-        Some(
+fn _get_user(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigError> {
+    if let Some(user) = table.get("user") {
+        Ok(Some(
             user.as_str()
                 .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?
                 .to_owned(),
-        )
+        ))
     } else {
-        None
-    };
-    let group = if let Some(group) = table.get("group") {
-        Some(
+        Ok(None)
+    }
+}
+
+fn _get_group(table: &ConfigTable, idx: usize) -> Result<Option<String>,ConfigError> {
+    if let Some(group) = table.get("group") {
+        Ok(Some(
             group
                 .as_str()
                 .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?
                 .to_owned(),
-        )
+        ))
     } else {
-        None
-    };
-    let mode = if let Some(mode) = table.get("mode") {
+        Ok(None)
+    }
+}
+
+fn _get_mode(table: &ConfigTable, source: &str, idx: usize) -> Result<Option<usize>, ConfigError> {
+    if let Some(mode) = table.get("mode") {
         let mode = mode
             .as_str()
             .ok_or(ConfigError::AssetFileWrongType(idx, "mode", "string"))?;
@@ -222,35 +257,30 @@ fn _handle_file(
         } else {
             Some(0o100000) // S_IFREG
         };
-        Some(file_mode.unwrap_or_default() | mode)
+        Ok(Some(file_mode.unwrap_or_default() | mode))
     } else {
-        None
-    };
-    let config = if let Some(is_config) = table.get("config") {
+        Ok(None)
+    }
+}
+
+fn _get_config(table: &ConfigTable, idx: usize) -> Result<bool, ConfigError> {
+    if let Some(is_config) = table.get("config") {
         is_config
             .as_bool()
-            .ok_or(ConfigError::AssetFileWrongType(idx, "config", "bool"))?
+            .ok_or(ConfigError::AssetFileWrongType(idx, "config", "bool"))
     } else {
-        false
-    };
-    let doc = if let Some(is_doc) = table.get("doc") {
+        Ok(false)
+    }
+}
+
+fn _get_doc(table: &ConfigTable, idx: usize) -> Result<bool, ConfigError> {
+    if let Some(is_doc) = table.get("doc") {
         is_doc
             .as_bool()
-            .ok_or(ConfigError::AssetFileWrongType(idx, "doc", "bool"))?
+            .ok_or(ConfigError::AssetFileWrongType(idx, "doc", "bool"))
     } else {
-        false
-    };
-
-    let info = FileInfo {
-        source: source.to_owned(),
-        dest: dest.to_owned(),
-        user,
-        group,
-        mode,
-        config,
-        doc,
-    };
-    Ok(info)
+        Ok(false)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
