@@ -179,7 +179,10 @@ impl Config {
     }
 }
 
-fn _get_files_from_assent_entry(table: ConfigTable, idx: usize) -> Result<Vec<FileInfo>, ConfigError> {
+fn _get_files_from_assent_entry(
+    table: ConfigTable,
+    idx: usize,
+) -> Result<Vec<FileInfo>, ConfigError> {
     let source = _get_string_from_table(&table, "source", idx)?;
     let dest = _get_string_from_table(&table, "dest", idx)?;
     let user = _get_opt_string_from_table(&table, "user", idx)?;
@@ -191,31 +194,27 @@ fn _get_files_from_assent_entry(table: ConfigTable, idx: usize) -> Result<Vec<Fi
     if source.contains('*') {
         let mut files = Vec::new();
         let base = _get_base_from_glob(&source);
-        for path in glob(&source)
-            .map_err(|e| ConfigError::AssetGlobInvalid(idx, e.msg))? {
-                let file = path.map_err(|_| ConfigError::AssetReadFailed("asset"))?;
-                if file.is_dir() {
-                    continue;
-                }
-                let rel_path = file.strip_prefix(base).unwrap();
-                let dest_path = Path::new(&dest).join(rel_path);
-                let src = file.to_str().unwrap().to_owned();
-                let dst = dest_path.to_str().unwrap().to_owned();
-                files.push(
-                    FileInfo{
-                        source: src,
-                        dest: dst,
-                        user: user.clone(),
-                        group: group.clone(),
-                        mode,
-                        config,
-                        doc
-                    }
-                );
+        for path in glob(&source).map_err(|e| ConfigError::AssetGlobInvalid(idx, e.msg))? {
+            let file = path.map_err(|_| ConfigError::AssetReadFailed("asset"))?;
+            if file.is_dir() {
+                continue;
             }
+            let rel_path = file.strip_prefix(base).unwrap();
+            let dest_path = Path::new(&dest).join(rel_path);
+            let src = file.to_str().unwrap().to_owned();
+            let dst = dest_path.to_str().unwrap().to_owned();
+            files.push(FileInfo {
+                source: src,
+                dest: dst,
+                user: user.clone(),
+                group: group.clone(),
+                mode,
+                config,
+                doc,
+            });
+        }
         Ok(files)
-    }
-    else {
+    } else {
         let info = FileInfo {
             source,
             dest,
