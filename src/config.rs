@@ -194,12 +194,17 @@ fn _get_files_from_assent_entry(table: ConfigTable, idx: usize) -> Result<Vec<Fi
         for path in glob(&source)
             .map_err(|e| ConfigError::AssetGlobInvalid(idx, e.msg))? {
                 let file = path.map_err(|_| ConfigError::AssetReadFailed("asset"))?;
+                if file.is_dir() {
+                    continue;
+                }
                 let rel_path = file.strip_prefix(base).unwrap();
                 let dest_path = Path::new(&dest).join(rel_path);
+                let src = file.to_str().unwrap().to_owned();
+                let dst = dest_path.to_str().unwrap().to_owned();
                 files.push(
                     FileInfo{
-                        source: file.to_str().unwrap().to_owned(),
-                        dest: dest_path.to_str().unwrap().to_owned(),
+                        source: src,
+                        dest: dst,
                         user: user.clone(),
                         group: group.clone(),
                         mode,
