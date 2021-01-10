@@ -68,10 +68,7 @@ impl Config {
             let table = value
                 .as_table()
                 .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?;
-            let info = _handle_file(
-                table,
-                idx,
-            )?;
+            let info = _handle_file(table, idx)?;
 
             files.push(info);
         }
@@ -178,7 +175,10 @@ impl Config {
     }
 }
 
-fn _handle_file(table: &toml::map::Map<std::string::String, cargo_toml::Value>, idx: usize) -> Result<FileInfo, ConfigError> {
+fn _handle_file(
+    table: &toml::map::Map<std::string::String, cargo_toml::Value>,
+    idx: usize,
+) -> Result<FileInfo, ConfigError> {
     let source = table
         .get("source")
         .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
@@ -193,7 +193,8 @@ fn _handle_file(table: &toml::map::Map<std::string::String, cargo_toml::Value>, 
     let user = if let Some(user) = table.get("user") {
         Some(
             user.as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?.to_owned(),
+                .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?
+                .to_owned(),
         )
     } else {
         None
@@ -202,7 +203,8 @@ fn _handle_file(table: &toml::map::Map<std::string::String, cargo_toml::Value>, 
         Some(
             group
                 .as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?.to_owned(),
+                .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?
+                .to_owned(),
         )
     } else {
         None
