@@ -51,7 +51,7 @@ fn process(
 }
 
 fn main() {
-    let program = env::args().nth(0).unwrap();
+    let program = env::args().next().unwrap();
 
     let mut opts = Options::new();
     opts.optopt("a", "arch", "set target arch", "ARCH");
@@ -71,7 +71,7 @@ fn main() {
         println!("{}", opts.usage(&*format!("Usage: {} [options]", program)));
     }
     let target_arch = opt_matches.opt_str("a");
-    let target_file = opt_matches.opt_str("o").map(|v| PathBuf::from(v));
+    let target_file = opt_matches.opt_str("o").map(PathBuf::from);
     let package = opt_matches.opt_str("p");
 
     process(target_arch, target_file, package).unwrap_or_else(|err| {
