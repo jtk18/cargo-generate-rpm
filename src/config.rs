@@ -179,14 +179,14 @@ impl Config {
 }
 
 fn _handle_file(table: ConfigTable, idx: usize) -> Result<FileInfo, ConfigError> {
-    let source = _get_source(&table, idx)?;
-    let dest = _get_dest(&table, idx)?;
+    let source = _get_string_from_table(&table, "source", idx)?;
+    let dest = _get_string_from_table(&table, "dest", idx)?;
 
-    let user = _get_user(&table, idx)?;
-    let group = _get_group(&table, idx)?;
+    let user = _get_opt_string_from_table(&table, "user", idx)?;
+    let group = _get_opt_string_from_table(&table, "group", idx)?;
     let mode = _get_mode(&table, &source, idx)?;
-    let config = _get_config(&table, idx)?;
-    let doc = _get_doc(&table, idx)?;
+    let config = _get_bool_from_table(&table, "config", idx)?;
+    let doc = _get_bool_from_table(&table, "doc", idx)?;
 
     let info = FileInfo {
         source,
@@ -200,42 +200,20 @@ fn _handle_file(table: ConfigTable, idx: usize) -> Result<FileInfo, ConfigError>
     Ok(info)
 }
 
-fn _get_source(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
+fn _get_string_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<String, ConfigError> {
     Ok(table
-        .get("source")
-        .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
+        .get(key)
+        .ok_or(ConfigError::AssetFileUndefined(idx, key))?
         .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?
+        .ok_or(ConfigError::AssetFileWrongType(idx, key, "string"))?
         .to_owned())
 }
 
-fn _get_dest(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
-    Ok(table
-        .get("dest")
-        .ok_or(ConfigError::AssetFileUndefined(idx, "dest"))?
-        .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?
-        .to_owned())
-}
-
-fn _get_user(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigError> {
-    if let Some(user) = table.get("user") {
+fn _get_opt_string_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<Option<String>, ConfigError> {
+    if let Some(user) = table.get(key) {
         Ok(Some(
             user.as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?
-                .to_owned(),
-        ))
-    } else {
-        Ok(None)
-    }
-}
-
-fn _get_group(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigError> {
-    if let Some(group) = table.get("group") {
-        Ok(Some(
-            group
-                .as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?
+                .ok_or(ConfigError::AssetFileWrongType(idx, key, "string"))?
                 .to_owned(),
         ))
     } else {
@@ -263,21 +241,11 @@ fn _get_mode(table: &ConfigTable, source: &str, idx: usize) -> Result<Option<usi
     }
 }
 
-fn _get_config(table: &ConfigTable, idx: usize) -> Result<bool, ConfigError> {
-    if let Some(is_config) = table.get("config") {
+fn _get_bool_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<bool, ConfigError> {
+    if let Some(is_config) = table.get(key) {
         is_config
             .as_bool()
-            .ok_or(ConfigError::AssetFileWrongType(idx, "config", "bool"))
-    } else {
-        Ok(false)
-    }
-}
-
-fn _get_doc(table: &ConfigTable, idx: usize) -> Result<bool, ConfigError> {
-    if let Some(is_doc) = table.get("doc") {
-        is_doc
-            .as_bool()
-            .ok_or(ConfigError::AssetFileWrongType(idx, "doc", "bool"))
+            .ok_or(ConfigError::AssetFileWrongType(idx, key, "bool"))
     } else {
         Ok(false)
     }
