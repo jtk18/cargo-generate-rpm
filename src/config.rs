@@ -64,10 +64,10 @@ impl Config {
             ))?;
 
         let mut files = Vec::with_capacity(assets.len());
-        for (idx, value) in assets.into_iter().enumerate() {
+        for (idx, value) in assets.iter().enumerate() {
             let table = value
                 .as_table()
-                .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?;
+                .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?.clone();
             let info = _handle_file(table, idx)?;
 
             files.push(info);
@@ -176,7 +176,7 @@ impl Config {
 }
 
 fn _handle_file(
-    table: &toml::map::Map<std::string::String, cargo_toml::Value>,
+    table: toml::map::Map<std::string::String, cargo_toml::Value>,
     idx: usize,
 ) -> Result<FileInfo, ConfigError> {
     let source = table
@@ -244,11 +244,11 @@ fn _handle_file(
     let info = FileInfo {
         source: source.to_owned(),
         dest: dest.to_owned(),
-        user: user.to_owned(),
-        group: group.clone(),
-        mode: mode.clone(),
-        config: config.clone(),
-        doc: doc.clone(),
+        user,
+        group,
+        mode,
+        config,
+        doc,
     };
     Ok(info)
 }
