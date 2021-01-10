@@ -69,7 +69,8 @@ impl Config {
         for (idx, value) in assets.iter().enumerate() {
             let table = value
                 .as_table()
-                .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?.clone();
+                .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
+                .clone();
             let info = _handle_file(table, idx)?;
 
             files.push(info);
@@ -177,10 +178,7 @@ impl Config {
     }
 }
 
-fn _handle_file(
-    table: ConfigTable,
-    idx: usize,
-) -> Result<FileInfo, ConfigError> {
+fn _handle_file(table: ConfigTable, idx: usize) -> Result<FileInfo, ConfigError> {
     let source = _get_source(&table, idx)?;
     let dest = _get_dest(&table, idx)?;
 
@@ -207,7 +205,8 @@ fn _get_source(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
         .get("source")
         .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
         .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?.to_owned())
+        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?
+        .to_owned())
 }
 
 fn _get_dest(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
@@ -215,7 +214,8 @@ fn _get_dest(table: &ConfigTable, idx: usize) -> Result<String, ConfigError> {
         .get("dest")
         .ok_or(ConfigError::AssetFileUndefined(idx, "dest"))?
         .as_str()
-        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?.to_owned())
+        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?
+        .to_owned())
 }
 
 fn _get_user(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigError> {
@@ -230,7 +230,7 @@ fn _get_user(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigEr
     }
 }
 
-fn _get_group(table: &ConfigTable, idx: usize) -> Result<Option<String>,ConfigError> {
+fn _get_group(table: &ConfigTable, idx: usize) -> Result<Option<String>, ConfigError> {
     if let Some(group) = table.get("group") {
         Ok(Some(
             group
