@@ -112,15 +112,15 @@ impl Config {
             .package
             .as_ref()
             .ok_or(ConfigError::Missing("package"))?;
-        let name = get_str_from_metadata!("name").unwrap_or_else(||pkg.name.as_str());
-        let version = get_str_from_metadata!("version").unwrap_or_else(||pkg.version.as_str());
+        let name = get_str_from_metadata!("name").unwrap_or_else(|| pkg.name.as_str());
+        let version = get_str_from_metadata!("version").unwrap_or_else(|| pkg.version.as_str());
         let license = get_str_from_metadata!("license").unwrap_or(
             pkg.license
                 .as_ref()
                 .ok_or(ConfigError::Missing("package.license"))?
                 .as_str(),
         );
-        let arch = target_arch.unwrap_or_else(||
+        let arch = target_arch.unwrap_or_else(|| {
             match ARCH {
                 "x86" => "i586",
                 "arm" => "armhfp",
@@ -128,8 +128,8 @@ impl Config {
                 "powerpc64" => "ppc64",
                 _ => ARCH,
             }
-            .to_string(),
-        );
+            .to_string()
+        });
         let desc = get_str_from_metadata!("summary").unwrap_or(
             pkg.description
                 .as_ref()
@@ -148,7 +148,7 @@ impl Config {
             ]
             .iter()
             .find(|v| v.exists())
-            .ok_or_else(||ConfigError::AssetFileNotFound(file.source.to_string()))?
+            .ok_or_else(|| ConfigError::AssetFileNotFound(file.source.to_string()))?
             .to_owned();
 
             builder = builder.with_file(file_source, options)?;
@@ -200,7 +200,11 @@ fn _handle_file(table: ConfigTable, idx: usize) -> Result<FileInfo, ConfigError>
     Ok(info)
 }
 
-fn _get_string_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<String, ConfigError> {
+fn _get_string_from_table(
+    table: &ConfigTable,
+    key: &'static str,
+    idx: usize,
+) -> Result<String, ConfigError> {
     Ok(table
         .get(key)
         .ok_or(ConfigError::AssetFileUndefined(idx, key))?
@@ -209,7 +213,11 @@ fn _get_string_from_table(table: &ConfigTable, key: &'static str, idx: usize) ->
         .to_owned())
 }
 
-fn _get_opt_string_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<Option<String>, ConfigError> {
+fn _get_opt_string_from_table(
+    table: &ConfigTable,
+    key: &'static str,
+    idx: usize,
+) -> Result<Option<String>, ConfigError> {
     if let Some(user) = table.get(key) {
         Ok(Some(
             user.as_str()
@@ -241,7 +249,11 @@ fn _get_mode(table: &ConfigTable, source: &str, idx: usize) -> Result<Option<usi
     }
 }
 
-fn _get_bool_from_table(table: &ConfigTable, key: &'static str, idx: usize) -> Result<bool, ConfigError> {
+fn _get_bool_from_table(
+    table: &ConfigTable,
+    key: &'static str,
+    idx: usize,
+) -> Result<bool, ConfigError> {
     if let Some(is_config) = table.get(key) {
         is_config
             .as_bool()
