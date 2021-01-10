@@ -64,79 +64,16 @@ impl Config {
             ))?;
 
         let mut files = Vec::with_capacity(assets.len());
-        for (idx, value) in assets.iter().enumerate() {
+        for (idx, value) in assets.into_iter().enumerate() {
             let table = value
                 .as_table()
                 .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?;
-            let source = table
-                .get("source")
-                .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
-                .as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?;
-            let dest = table
-                .get("dest")
-                .ok_or(ConfigError::AssetFileUndefined(idx, "dest"))?
-                .as_str()
-                .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?;
+            let info = _handle_file(
+                table,
+                idx,
+            )?;
 
-            let user = if let Some(user) = table.get("user") {
-                Some(
-                    user.as_str()
-                        .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?,
-                )
-            } else {
-                None
-            };
-            let group = if let Some(group) = table.get("group") {
-                Some(
-                    group
-                        .as_str()
-                        .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?,
-                )
-            } else {
-                None
-            };
-            let mode = if let Some(mode) = table.get("mode") {
-                let mode = mode
-                    .as_str()
-                    .ok_or(ConfigError::AssetFileWrongType(idx, "mode", "string"))?;
-                let mode = usize::from_str_radix(mode, 8)
-                    .map_err(|_| ConfigError::AssetFileWrongType(idx, "mode", "oct-string"))?;
-                let file_mode = if mode & 0o170000 != 0 {
-                    None
-                } else if source.ends_with('/') {
-                    Some(0o040000) // S_IFDIR
-                } else {
-                    Some(0o100000) // S_IFREG
-                };
-                Some(file_mode.unwrap_or_default() | mode)
-            } else {
-                None
-            };
-            let config = if let Some(is_config) = table.get("config") {
-                is_config
-                    .as_bool()
-                    .ok_or(ConfigError::AssetFileWrongType(idx, "config", "bool"))?
-            } else {
-                false
-            };
-            let doc = if let Some(is_doc) = table.get("doc") {
-                is_doc
-                    .as_bool()
-                    .ok_or(ConfigError::AssetFileWrongType(idx, "doc", "bool"))?
-            } else {
-                false
-            };
-
-            files.push(FileInfo {
-                source,
-                dest,
-                user,
-                group,
-                mode,
-                config,
-                doc,
-            });
+            files.push(info);
         }
         Ok(files)
     }
@@ -206,8 +143,8 @@ impl Config {
             let options = file.generate_rpm_file_options();
 
             let file_source = [
-                PathBuf::from(file.source),
-                self.path.parent().unwrap().join(file.source),
+                PathBuf::from(&file.source),
+                self.path.parent().unwrap().join(&file.source),
             ]
             .iter()
             .find(|v| v.exists())
@@ -241,24 +178,97 @@ impl Config {
     }
 }
 
+fn _handle_file(table: &toml::map::Map<std::string::String, cargo_toml::Value>, idx: usize) -> Result<FileInfo, ConfigError> {
+    let source = table
+        .get("source")
+        .ok_or(ConfigError::AssetFileUndefined(idx, "source"))?
+        .as_str()
+        .ok_or(ConfigError::AssetFileWrongType(idx, "source", "string"))?;
+    let dest = table
+        .get("dest")
+        .ok_or(ConfigError::AssetFileUndefined(idx, "dest"))?
+        .as_str()
+        .ok_or(ConfigError::AssetFileWrongType(idx, "dest", "string"))?;
+
+    let user = if let Some(user) = table.get("user") {
+        Some(
+            user.as_str()
+                .ok_or(ConfigError::AssetFileWrongType(idx, "user", "string"))?.to_owned(),
+        )
+    } else {
+        None
+    };
+    let group = if let Some(group) = table.get("group") {
+        Some(
+            group
+                .as_str()
+                .ok_or(ConfigError::AssetFileWrongType(idx, "group", "string"))?.to_owned(),
+        )
+    } else {
+        None
+    };
+    let mode = if let Some(mode) = table.get("mode") {
+        let mode = mode
+            .as_str()
+            .ok_or(ConfigError::AssetFileWrongType(idx, "mode", "string"))?;
+        let mode = usize::from_str_radix(mode, 8)
+            .map_err(|_| ConfigError::AssetFileWrongType(idx, "mode", "oct-string"))?;
+        let file_mode = if mode & 0o170000 != 0 {
+            None
+        } else if source.ends_with('/') {
+            Some(0o040000) // S_IFDIR
+        } else {
+            Some(0o100000) // S_IFREG
+        };
+        Some(file_mode.unwrap_or_default() | mode)
+    } else {
+        None
+    };
+    let config = if let Some(is_config) = table.get("config") {
+        is_config
+            .as_bool()
+            .ok_or(ConfigError::AssetFileWrongType(idx, "config", "bool"))?
+    } else {
+        false
+    };
+    let doc = if let Some(is_doc) = table.get("doc") {
+        is_doc
+            .as_bool()
+            .ok_or(ConfigError::AssetFileWrongType(idx, "doc", "bool"))?
+    } else {
+        false
+    };
+
+    let info = FileInfo {
+        source: source.to_owned(),
+        dest: dest.to_owned(),
+        user: user.to_owned(),
+        group: group.clone(),
+        mode: mode.clone(),
+        config: config.clone(),
+        doc: doc.clone(),
+    };
+    Ok(info)
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct FileInfo<'a, 'b, 'c, 'd> {
-    source: &'a str,
-    dest: &'b str,
-    user: Option<&'c str>,
-    group: Option<&'d str>,
+pub struct FileInfo {
+    source: String,
+    dest: String,
+    user: Option<String>,
+    group: Option<String>,
     mode: Option<usize>,
     config: bool,
     doc: bool,
 }
 
-impl FileInfo<'_, '_, '_, '_> {
+impl FileInfo {
     fn generate_rpm_file_options(&self) -> RPMFileOptions {
-        let mut rpm_file_option = RPMFileOptions::new(self.dest);
-        if let Some(user) = self.user {
+        let mut rpm_file_option = RPMFileOptions::new(&self.dest);
+        if let Some(user) = &self.user {
             rpm_file_option = rpm_file_option.user(user);
         }
-        if let Some(group) = self.group {
+        if let Some(group) = &self.group {
             rpm_file_option = rpm_file_option.group(group);
         }
         if let Some(mode) = self.mode {
@@ -308,8 +318,8 @@ mod test {
             files,
             vec![
                 FileInfo {
-                    source: "target/release/cargo-generate-rpm",
-                    dest: "/usr/bin/cargo-generate-rpm",
+                    source: "target/release/cargo-generate-rpm".to_owned(),
+                    dest: "/usr/bin/cargo-generate-rpm".to_owned(),
                     user: None,
                     group: None,
                     mode: Some(0o0100755),
@@ -317,8 +327,8 @@ mod test {
                     doc: false
                 },
                 FileInfo {
-                    source: "LICENSE",
-                    dest: "/usr/share/doc/cargo-generate-rpm/LICENSE",
+                    source: "LICENSE".to_owned(),
+                    dest: "/usr/share/doc/cargo-generate-rpm/LICENSE".to_owned(),
                     user: None,
                     group: None,
                     mode: Some(0o0100644),
@@ -326,8 +336,8 @@ mod test {
                     doc: true
                 },
                 FileInfo {
-                    source: "README.md",
-                    dest: "/usr/share/doc/cargo-generate-rpm/README.md",
+                    source: "README.md".to_owned(),
+                    dest: "/usr/share/doc/cargo-generate-rpm/README.md".to_owned(),
                     user: None,
                     group: None,
                     mode: Some(0o0100644),
