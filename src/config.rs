@@ -199,6 +199,11 @@ fn _get_files_from_assent_entry(
             if file.is_dir() {
                 continue;
             }
+            if let Some(name) = file.file_name() {
+                if name.to_str().unwrap().starts_with('.') {
+                    continue;
+                }
+            }
             let rel_path = file.strip_prefix(base).unwrap();
             let dest_path = Path::new(&dest).join(rel_path);
             let src = file.to_str().unwrap().to_owned();
